@@ -5,123 +5,197 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Year Progress Calculator</title>
     <style>
-        body {
-            background-color: transparent; /* Makes the background transparent for iframe embedding */
-            margin: 0; /* Removes default margin */
-        }
         .container {
             font-family: Arial, sans-serif;
             text-align: center;
             margin: 50px;
         }
-        select, input, button {
+        input {
             padding: 10px;
             margin: 10px;
         }
         canvas {
             margin-top: 20px;
+            max-width: 100%;
+        }
+        #progressBarContainer {
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        #progressBar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            transition: width 0.5s ease-in-out;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 20px;
+            }
+            input {
+                width: 100%;
+                margin: 5px 0;
+            }
+            canvas {
+                width: 100%;
+                height: auto;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <label for="monthInput">Choose Month:</label>
-        <select id="monthInput">
-            <option value="1">January</option>
-            <option value="2">February</option>
-            <option value="3">March</option>
-            <option value="4">April</option>
-            <option value="5">May</option>
-            <option value="6">June</option>
-            <option value="7">July</option>
-            <option value="8">August</option>
-            <option value="9">September</option>
-            <option value="10">October</option>
-            <option value="11">November</option>
-            <option value="12">December</option>
-        </select>
+        <label for="dateInput">Choose Date:</label>
+        <input type="date" id="dateInput" onchange="handleDateChange()">
 
-        <label for="dayInput">Choose Day:</label>
-        <input type="number" id="dayInput" min="1" max="31">
-
-        <label for="leapYearInput">Is it a leap year?</label>
-        <input type="checkbox" id="leapYearInput">
-
-        <button onclick="calculateProgress()">Calculate</button>
         <p id="result"></p>
+        <p id="timeRemaining"></p>
+        <p id="countdown"></p>
+
+        <!-- Progress Bar -->
+        <div id="progressBarContainer">
+            <div id="progressBar"></div>
+        </div>
 
         <!-- Pie Chart -->
         <canvas id="yearProgressChart" width="200" height="200"></canvas>
-
-        <script>
-            window.onload = function() {
-                const now = new Date();
-                const currentMonth = now.getMonth() + 1;
-                const currentDay = now.getDate();
-                const currentYear = now.getFullYear();
-
-                document.getElementById("monthInput").value = currentMonth;
-                document.getElementById("dayInput").value = currentDay;
-
-                const isLeap = (currentYear % 4 === 0 && currentYear % 100 !== 0) || (currentYear % 400 === 0);
-                document.getElementById("leapYearInput").checked = isLeap;
-
-                calculateProgress(); // Run on load with today’s date
-            };
-
-            function calculateProgress() {
-                const monthInput = parseInt(document.getElementById("monthInput").value);
-                const dayInput = parseInt(document.getElementById("dayInput").value);
-                const isLeap = document.getElementById("leapYearInput").checked;
-                const now = new Date();
-                const year = now.getFullYear();
-                const daysInMonth = [31, (isLeap ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-                
-                if (dayInput < 1 || dayInput > daysInMonth[monthInput - 1]) {
-                    document.getElementById("result").innerText = "Please enter a valid day for the selected month.";
-                    return;
-                }
-
-                let dayOfYear = 0;
-                for (let i = 0; i < monthInput - 1; i++) {
-                    dayOfYear += daysInMonth[i];
-                }
-                dayOfYear += dayInput;
-
-                const totalDays = isLeap ? 366 : 365;
-                const percentPassed = (dayOfYear / totalDays) * 100;
-                const degreesPassed = (percentPassed / 100) * 360;
-
-                document.getElementById("result").innerHTML = `On ${monthInput}/${dayInput} (Day ${dayOfYear} of the year), approximately ${percentPassed.toFixed(6)}% of the year has passed.<br>This is equivalent to about ${degreesPassed.toFixed(2)}° in a 360-degree circle.`;
-
-                drawPieChart(percentPassed);
-            }
-
-            function drawPieChart(percent) {
-                const canvas = document.getElementById("yearProgressChart");
-                const ctx = canvas.getContext("2d");
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-                const radius = 80;
-
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                // Draw the background circle (remaining part of the year)
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = "#ddd"; // Light gray for unused year
-                ctx.fill();
-
-                // Draw the progress arc
-                const endAngle = (percent / 100) * 2 * Math.PI;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, -Math.PI / 2, endAngle - Math.PI / 2, false);
-                ctx.lineTo(centerX, centerY);
-                ctx.fillStyle = "#4CAF50"; // Green for completed portion
-                ctx.fill();
-            }
-        </script>
     </div>
+
+    <script>
+        // Load today's date on page load
+        window.onload = function() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            document.getElementById("dateInput").value = `${year}-${month}-${day}`;
+            handleDateChange();
+        };
+
+        function handleDateChange() {
+            calculateProgress();
+            updateCountdownAndProgressBar();
+        }
+
+        function calculateProgress() {
+            const dateInput = document.getElementById("dateInput").value;
+            const date = new Date(dateInput + 'T00:00:00');
+
+            if (isNaN(date.getTime())) {
+                document.getElementById("result").innerText = "Please enter a valid date.";
+                return;
+            }
+
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+
+            // Check if it's a leap year
+            const isLeap = new Date(year, 1, 29).getMonth() === 1;
+            const daysInMonth = [31, (isLeap ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+            if (day < 1 || day > daysInMonth[month - 1]) {
+                document.getElementById("result").innerText = "Please enter a valid date.";
+                return;
+            }
+
+            // Calculate day of the year
+            let dayOfYear = 0;
+            for (let i = 0; i < month - 1; i++) {
+                dayOfYear += daysInMonth[i];
+            }
+            dayOfYear += day;
+
+            // Calculate progress
+            const totalDays = isLeap ? 366 : 365;
+            const percentPassed = (dayOfYear / totalDays) * 100;
+            const degreesPassed = (percentPassed / 100) * 360;
+
+            document.getElementById("result").innerHTML = `
+                On ${month}/${day}/${year} (Day ${dayOfYear} of the year), approximately ${percentPassed.toFixed(6)}% of the year has passed.<br>
+                This is equivalent to about ${degreesPassed.toFixed(2)}° in a 360-degree circle.<br>
+                ${isLeap ? "This is a leap year." : "This is not a leap year."}
+            `;
+
+            drawPieChart(percentPassed);
+        }
+
+        function drawPieChart(percent) {
+            const canvas = document.getElementById("yearProgressChart");
+            const ctx = canvas.getContext("2d");
+            
+            // Ensure canvas is responsive
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientWidth;
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = centerX * 0.8;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the background circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = "#ddd";
+            ctx.fill();
+
+            // Draw the progress arc with gradient
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, "#4CAF50");
+            gradient.addColorStop(1, "#2E7D32");
+
+            const endAngle = (percent / 100) * 2 * Math.PI;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, -Math.PI / 2, endAngle - Math.PI / 2, false);
+            ctx.lineTo(centerX, centerY);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+        }
+
+        function updateCountdownAndProgressBar() {
+            const dateInput = document.getElementById("dateInput").value;
+            const selectedDate = new Date(dateInput + 'T23:59:59');
+            const year = selectedDate.getFullYear();
+            const endOfYear = new Date(year, 11, 31, 23, 59, 59);
+
+            if (isNaN(selectedDate.getTime())) {
+                document.getElementById("countdown").innerText = "Invalid date.";
+                return;
+            }
+
+            // Calculate days remaining
+            const timeRemaining = endOfYear - selectedDate;
+            const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+            document.getElementById("countdown").innerText = `${days} days remaining`;
+
+            // Calculate progress bar width
+            const startOfYear = new Date(year, 0, 1);
+            const totalMs = endOfYear - startOfYear;
+            const elapsedMs = selectedDate - startOfYear;
+            const percentPassed = (elapsedMs / totalMs) * 100;
+
+            animateProgressBar(percentPassed);
+        }
+
+        function animateProgressBar(targetWidth) {
+            const progressBar = document.getElementById("progressBar");
+            let currentWidth = parseFloat(progressBar.style.width) || 0;
+
+            function step() {
+                currentWidth += (targetWidth - currentWidth) * 0.1;
+                progressBar.style.width = `${Math.min(currentWidth, 100)}%`;
+
+                if (Math.abs(currentWidth - targetWidth) > 0.5) {
+                    requestAnimationFrame(step);
+                }
+            }
+            requestAnimationFrame(step);
+        }
+    </script>
 </body>
 </html>
