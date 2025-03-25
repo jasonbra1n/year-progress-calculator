@@ -128,7 +128,7 @@ function adjustTextColor() {
     const body = document.body;
     const bgColor = window.getComputedStyle(body).backgroundColor;
 
-    console.log("Detected background color:", bgColor); // Debug: Check what’s detected
+    console.log("Detected background color:", bgColor); // Debug
 
     // Parse RGB values from "rgb(r, g, b)" or "rgba(r, g, b, a)"
     const rgbMatch = bgColor.match(/\d+\.?\d*/g);
@@ -136,14 +136,19 @@ function adjustTextColor() {
         const r = parseFloat(rgbMatch[0]);
         const g = parseFloat(rgbMatch[1]);
         const b = parseFloat(rgbMatch[2]);
+        const a = rgbMatch.length > 3 ? parseFloat(rgbMatch[3]) : 1; // Alpha channel, default to 1 if not present
         const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-        
-        console.log("Calculated luminance:", luminance); // Debug: Check luminance value
-        
-        // Set text color: white for dark backgrounds, black for light
-        container.style.color = luminance < 128 ? '#ffffff' : '#000000';
+
+        console.log("Calculated luminance:", luminance, "Alpha:", a); // Debug
+
+        // If fully transparent (a === 0), assume parent background might be dark, but default to black for standalone
+        if (a === 0) {
+            console.log("Fully transparent background, using fallback: black");
+            container.style.color = '#000000';
+        } else {
+            container.style.color = luminance < 128 ? '#ffffff' : '#000000';
+        }
     } else {
-        // Fallback: if background can’t be parsed (e.g., transparent), default to black
         console.log("Background parsing failed, using fallback: black");
         container.style.color = '#000000';
     }
