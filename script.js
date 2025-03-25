@@ -5,13 +5,13 @@ window.onload = function() {
     const day = String(now.getDate()).padStart(2, '0');
     document.getElementById("dateInput").value = `${year}-${month}-${day}`;
     handleDateChange();
-    adjustTextColor(); // Initial text color adjustment
+    adjustTextColor();
 };
 
 function handleDateChange() {
     calculateProgress();
     updateCountdownAndProgressBar();
-    adjustTextColor(); // Re-adjust text color on date change
+    adjustTextColor();
 }
 
 function calculateProgress() {
@@ -128,7 +128,10 @@ function adjustTextColor() {
     const body = document.body;
     const bgColor = window.getComputedStyle(body).backgroundColor;
 
-    console.log("Detected background color:", bgColor); // Debug
+    console.log("Detected background color:", bgColor);
+
+    // Check if we're in an iframe
+    const isInIframe = window !== window.top;
 
     // Parse RGB values from "rgb(r, g, b)" or "rgba(r, g, b, a)"
     const rgbMatch = bgColor.match(/\d+\.?\d*/g);
@@ -136,20 +139,25 @@ function adjustTextColor() {
         const r = parseFloat(rgbMatch[0]);
         const g = parseFloat(rgbMatch[1]);
         const b = parseFloat(rgbMatch[2]);
-        const a = rgbMatch.length > 3 ? parseFloat(rgbMatch[3]) : 1; // Alpha channel, default to 1 if not present
+        const a = rgbMatch.length > 3 ? parseFloat(rgbMatch[3]) : 1;
         const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
 
-        console.log("Calculated luminance:", luminance, "Alpha:", a); // Debug
+        console.log("Calculated luminance:", luminance, "Alpha:", a);
 
-        // If fully transparent (a === 0), assume parent background might be dark, but default to black for standalone
         if (a === 0) {
-            console.log("Fully transparent background, using fallback: black");
-            container.style.color = '#000000';
+            if (isInIframe) {
+                console.log("In iframe with transparent background, assuming dark parent, using white");
+                container.style.color = '#ffffff';
+            } else {
+                console.log("Standalone with transparent background, using fallback: black");
+                container.style.color = '#000000';
+            }
         } else {
+            console.log("Solid background detected, using luminance check");
             container.style.color = luminance < 128 ? '#ffffff' : '#000000';
         }
     } else {
-        console.log("Background parsing failed, using fallback: black");
-        container.style.color = '#000000';
+        console.log("Background parsing failed, using context-based fallback");
+        container.style.color = isInIframe ? '#ffffff' : '#000000';
     }
 }
