@@ -1,4 +1,7 @@
- .container {
+body {
+    background-color: transparent;
+}
+.container {
             font-family: Arial, sans-serif;
             text-align: center;
             margin: 50px;
