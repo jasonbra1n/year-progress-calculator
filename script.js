@@ -139,7 +139,7 @@ function adjustTextColor() {
         // Set text color: white for dark backgrounds, black for light
         container.style.color = luminance < 128 ? '#ffffff' : '#000000';
     } else {
-        // Fallback: assume dark background (common for transparent iframes on dark pages)
-        container.style.color = '#ffffff';
+        // Fallback: assume light background (default when not in iframe), use black text
+        container.style.color = '#000000';
     }
 }
