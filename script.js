@@ -128,18 +128,23 @@ function adjustTextColor() {
     const body = document.body;
     const bgColor = window.getComputedStyle(body).backgroundColor;
 
-    // Parse RGB values from "rgb(r, g, b)" or "rgba(r, g, b, a)" string
+    console.log("Detected background color:", bgColor); // Debug: Check what’s detected
+
+    // Parse RGB values from "rgb(r, g, b)" or "rgba(r, g, b, a)"
     const rgbMatch = bgColor.match(/\d+\.?\d*/g);
     if (rgbMatch && rgbMatch.length >= 3) {
         const r = parseFloat(rgbMatch[0]);
         const g = parseFloat(rgbMatch[1]);
         const b = parseFloat(rgbMatch[2]);
-        // Calculate luminance (using relative luminance formula)
         const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+        
+        console.log("Calculated luminance:", luminance); // Debug: Check luminance value
+        
         // Set text color: white for dark backgrounds, black for light
         container.style.color = luminance < 128 ? '#ffffff' : '#000000';
     } else {
-        // Fallback: assume light background (default when not in iframe), use black text
+        // Fallback: if background can’t be parsed (e.g., transparent), default to black
+        console.log("Background parsing failed, using fallback: black");
         container.style.color = '#000000';
     }
 }
